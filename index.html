@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Controle do Projeto</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 5px 0;
+    }
+    .status {
+      font-weight: bold;
+      padding: 10px;
+      color: white;
+      border-radius: 5px;
+      display: inline-block;
+    }
+    .verde { background: green; }
+    .amarelo { background: orange; }
+    .vermelho { background: red; }
+    canvas {
+      max-width: 100%;
+    }
+    textarea {
+      width: 100%;
+      height: 60px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      padding: 8px;
+      resize: none;
+    }
+    button {
+      margin-top: 5px;
+      padding: 5px 10px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 Painel de Controle do Projeto</h1>
+
+  <!-- Checklist -->
+  <div class="section">
+    <h2>✅ Checklist</h2>
+    <ul>
+      <li><input type="checkbox" checked> Pesquisa inicial</li>
+      <li><input type="checkbox"> Definição dos objetivos</li>
+      <li><input type="checkbox"> Elaboração do relatório</li>
+      <li><input type="checkbox"> Preparar apresentação</li>
+    </ul>
+  </div>
+
+  <!-- Semáforo -->
+  <div class="section">
+    <h2>🚦 Semáforo de Status</h2>
+    <span id="status" class="status verde">Projeto no prazo</span>
+    <br><br>
+    <button onclick="setStatus('verde')">Verde</button>
+    <button onclick="setStatus('amarelo')">Amarelo</button>
+    <button onclick="setStatus('vermelho')">Vermelho</button>
+  </div>
+
+  <!-- Burndown -->
+  <div class="section">
+    <h2>📉 Burndown Chart</h2>
+    <canvas id="burndownChart"></canvas>
+    <br><br>
+    <label for="realProgress">Progresso Real (dias):</label>
+    <input type="text" id="realProgress" placeholder="10, 9, 8, 6, 4, 3">
+    <button onclick="updateBurndown()">Atualizar Burndown</button>
+  </div>
+
+  <!-- Caderno Inteligente -->
+  <div class="section">
+    <h2>📒 Caderno Inteligente – Anotações das Equipes</h2>
+    <p>Use os campos abaixo para registrar o avanço de cada equipe.</p>
+
+    <div id="notebook">
+      <div>
+        <h3>Equipe 1</h3>
+        <textarea id="team1"></textarea>
+        <button onclick="saveNotes(1)">Salvar</button>
+        <p id="team1Date"></p>
+      </div>
+      <div>
+        <h3>Equipe 2</h3>
+        <textarea id="team2"></textarea>
+        <button onclick="saveNotes(2)">Salvar</button>
+        <p id="team2Date"></p>
+      </div>
+      <div>
+        <h3>Equipe 3</h3>
+        <textarea id="team3"></textarea>
+        <button onclick="saveNotes(3)">Salvar</button>
+        <p id="team3Date"></p>
+      </div>
+      <div>
+        <h3>Equipe 4</h3>
+        <textarea id="team4"></textarea>
+        <button onclick="saveNotes(4)">Salvar</button>
+        <p id="team4Date"></p>
+      </div>
+      <div>
+        <h3>Equipe 5</h3>
+        <textarea id="team5"></textarea>
+        <button onclick="saveNotes(5)">Salvar</button>
+        <p id="team5Date"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Riscos -->
+  <div class="section risk">
+    <h2>⚠️ Monitoramento de Riscos</h2>
+    <label for="riskDescription">Descrição do risco:</label>
+    <textarea id="riskDescription" placeholder="Descreva o risco identificado"></textarea>
+    <label for="riskMitigation">Ação de mitigação:</label>
+    <textarea id="riskMitigation" placeholder="O que será feito para mitigar o risco"></textarea>
+    <button onclick="saveRisk()">Salvar Risco</button>
+  </div>
+
+  <!-- Início do código JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Função para alterar o semáforo
+    function setStatus(color) {
+      const status = document.getElementById("status");
+      status.className = "status " + color;
+      if (color === "verde") status.innerText = "Projeto no prazo";
+      if (color === "amarelo") status.innerText = "Risco identificado";
+      if (color === "vermelho") status.innerText = "Projeto atrasado";
+    }
+
+    // Gráfico Burndown
+    const ctx = document.getElementById('burndownChart').getContext('2d');
+    let burndownData = [10, 9, 7, 6, 4, 3]; // Progresso Real
+    const burndownChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Dia 1', 'Dia 2', 'Dia 3', 'Dia 4', 'Dia 5'],
+        datasets: [
+          {
+            label: 'Linha Ideal',
+            data: [10, 8, 6, 4, 2, 0],
+            borderColor: 'blue',
+            borderWidth: 2,
+            fill: false,
+            borderDash: [5, 5]
+          },
+          {
+            label: 'Progresso Real',
+            data: burndownData,
+            borderColor: 'red',
+            borderWidth: 2,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Função para atualizar o gráfico Burndown com dados inseridos pelo usuário
+    function updateBurndown() {
+      const progressInput = document.getElementById("realProgress").value;
+      const progressArray = progressInput.split(',').map(Number);
+      burndownData = progressArray;
+
+      burndownChart.data.datasets[1].data = burndownData;
+      burndownChart.update();
+    }
+
+    // Função para salvar anotações no localStorage com data de atualização
+    function saveNotes(team) {
+      const text = document.getElementById(`team${team}`).value;
+      const currentDate = new Date().toLocaleDateString();
+      localStorage.setItem(`team${team}Notes`, text);
+      localStorage.setItem(`team${team}Date`, currentDate);
+      alert(`Anotações da Equipe ${team} salvas!`);
+
+      document.getElementById(`team${team}Date`).innerText = `Última atualização: ${currentDate}`;
+    }
+
+    // Função para salvar o risco no localStorage
+    function saveRisk() {
+      const riskDescription = document.getElementById("riskDescription").value;
+      const riskMitigation = document.getElementById("riskMitigation").value;
+
+      if (riskDescription && riskMitigation) {
+        const risk = {
+          description: riskDescription,
+          mitigation: riskMitigation,
+          date: new Date().toLocaleDateString()
+        };
+
+        localStorage.setItem("risk", JSON.stringify(risk));
+        alert("Risco registrado com sucesso!");
+
+        document.getElementById("riskDescription").value = '';
+        document.getElementById("riskMitigation").value = '';
+      } else {
+        alert("Por favor, preencha todos os campos do risco.");
+      }
+    }
+
+    // Função para carregar os dados ao iniciar a página
+    // Função para carregar os dados ao iniciar a página
+window.onload = function() {
+  // Carregar anotações de cada equipe e suas datas de atualização
+  for (let i = 1; i <= 5; i++) {
+    const savedNotes = localStorage.getItem(`team${i}Notes`);
+    const savedDate = localStorage.getItem(`team${i}Date`);
+
+    if (savedNotes) {
+      document.getElementById(`team${i}`).value = savedNotes;
+    }
+    if (savedDate) {
+      document.getElementById(`team${i}Date`).innerText = `Última atualização: ${savedDate}`;
+    }
+  }
+
+  // Carregar o risco salvo
+  const savedRisk = localStorage.getItem("risk");
+  if (savedRisk) {
+    const risk = JSON.parse(savedRisk);
+    document.getElementById("riskDescription").value = risk.description;
+    document.getElementById("riskMitigation").value = risk.mitigation;
+  }
+};
+
