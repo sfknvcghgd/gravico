@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <title>Dashboard PMBOK - Controle e Monitoramento</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
 <style>
 body {
     font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -110,7 +113,26 @@ button:hover {
     <div id="historico"></div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+// 🔑 Credenciais do Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyATkhWldIDdpf882QBSdDAmAwzwnwIC7IE",
+  authDomain: "deshbords.firebaseapp.com",
+  databaseURL: "https://deshbords-default-rtdb.firebaseio.com",
+  projectId: "deshbords",
+  storageBucket: "deshbords.firebasestorage.app",
+  messagingSenderId: "569768993333",
+  appId: "1:569768993333:web:a3147de3955aae2177c77c",
+  measurementId: "G-VV06D2298P"
+};
+
+// Inicializa Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 const nomesGrupos = ["Iniciação", "Planejamento", "Execução", "Monitoramento", "Encerramento"];
 let progresso = [20, 40, 60, 50, 10];
 let atrasadas = [0, 1, 2, 0, 1];
@@ -119,168 +141,102 @@ let descricoes = ["", "", "", "", ""];
 let tempoPrevisto = [5, 7, 10, 6, 4];
 
 const formDiv = document.getElementById("formGrupos");
-nomesGrupos.forEach((nome, i) => {
-    formDiv.innerHTML += `
-        <h3>Grupo ${i+1} - ${nome} <span id="status${i}" class="status verde">Verde</span></h3>
-        <label>Descrição:</label>
-        <textarea id="desc${i}">${descricoes[i]}</textarea>
-        <label>% Concluído:</label>
-        <input type="number" id="prog${i}" min="0" max="100" value="${progresso[i]}">
-        <label>Tarefas Atrasadas:</label>
-        <input type="number" id="atr${i}" min="0" value="${atrasadas[i]}">
-        <label>Riscos Ativos:</label>
-        <input type="number" id="ris${i}" min="0" value="${riscos[i]}">
-        <label>Tempo previsto (dias):</label>
-        <input type="number" id="tempo${i}" min="1" value="${tempoPrevisto[i]}">
-        <button onclick="salvarGrupo(${i})">Salvar Grupo ${i+1}</button>
-        <hr>
-    `;
-});
 
-const ctxKPI = document.getElementById("kpiChart").getContext("2d");
-const kpiChart = new Chart(ctxKPI, {
+function montarFormulario() {
+    formDiv.innerHTML = "";
+    nomesGrupos.forEach((nome, i) => {
+        formDiv.innerHTML += `
+            <h3>Grupo ${i+1} - ${nome} <span id="status${i}" class="status verde">Verde</span></h3>
+            <label>Descrição:</label>
+            <textarea id="desc${i}">${descricoes[i]}</textarea>
+            <label>% Concluído:</label>
+            <input type="number" id="prog${i}" min="0" max="100" value="${progresso[i]}">
+            <label>Tarefas Atrasadas:</label>
+            <input type="number" id="atr${i}" min="0" value="${atrasadas[i]}">
+            <label>Riscos Ativos:</label>
+            <input type="number" id="ris${i}" min="0" value="${riscos[i]}">
+            <label>Tempo previsto (dias):</label>
+            <input type="number" id="tempo${i}" min="1" value="${tempoPrevisto[i]}">
+            <button onclick="salvarGrupo(${i})">Salvar Grupo ${i+1}</button>
+            <hr>
+        `;
+    });
+}
+montarFormulario();
+
+// ---- Gráficos ----
+const kpiChart = new Chart(document.getElementById("kpiChart"), {
     type: "doughnut",
-    data: {
-        labels: ["Concluído", "Restante"],
-        datasets: [{
-            data: [0, 100],
-            backgroundColor: ["#4caf50", "#e0e0e0"],
-            borderWidth: 0
-        }]
-    },
-    options: {
-        cutout: "80%",
-        plugins: {
-            legend: { display: false },
-            tooltip: { enabled: false },
-            title: {
-                display: true,
-                text: "Progresso Geral",
-                font: { size: 16 }
-            }
-        }
-    }
+    data: { labels: ["Concluído", "Restante"], datasets: [{ data: [0, 100], backgroundColor: ["#4caf50", "#e0e0e0"] }] },
+    options: { cutout: "80%", plugins: { legend: { display: false } } }
 });
-
 function atualizarKPI(valor) {
     kpiChart.data.datasets[0].data = [valor, 100 - valor];
     kpiChart.update();
 }
-
 const burndownChart = new Chart(document.getElementById("burndownChart"), {
     type: "line",
-    data: {
-        labels: ["Dia 1","Dia 2","Dia 3","Dia 4","Dia 5"],
+    data: { labels: ["Dia 1","Dia 2","Dia 3","Dia 4","Dia 5"],
         datasets: [
             { label: "Planejado", data: [100, 80, 60, 40, 20], borderColor: "blue", fill: false },
             { label: "Realizado", data: [100, 85, 70, 55, 40], borderColor: "red", fill: false }
-        ]
-    }
+        ]}
 });
-
-// 🚀 Gráfico de Gantt corrigido
 const ganttChart = new Chart(document.getElementById("ganttChart"), {
     type: "bar",
-    data: {
-        labels: nomesGrupos,
-        datasets: [{
-            label: "Tempo Previsto (dias)",
-            data: tempoPrevisto,
-            backgroundColor: tempoPrevisto.map(val => `rgba(33, 150, 243, ${0.4 + val/20})`),
-            borderColor: "rgba(33, 150, 243, 1)",
-            borderWidth: 2
-        }]
-    },
-    options: {
-        indexAxis: 'y',
-        animation: {
-            duration: 1000,
-            easing: 'easeInOutQuart'
-        },
-        plugins: {
-            legend: { display: false },
-            title: {
-                display: true,
-                text: "Gráfico de Gantt - Tempo Previsto por Grupo",
-                font: { size: 16 }
-            },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        return `⏳ ${context.raw} dias`;
-                    }
-                }
-            }
-        },
-        scales: {
-            x: {
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: "Dias"
-                }
-            },
-            y: {
-                ticks: {
-                    autoSkip: false, // <-- garante que TODOS grupos aparecem
-                    font: { size: 14 }
-                },
-                title: {
-                    display: true,
-                    text: "Grupos"
-                }
-            }
-        }
-    }
+    data: { labels: nomesGrupos, datasets: [{ label: "Tempo Previsto (dias)", data: tempoPrevisto, backgroundColor: "rgba(33,150,243,0.6)" }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } } }
 });
-
 const riscoChart = new Chart(document.getElementById("riscoChart"), {
     type: "bar",
-    data: {
-        labels: nomesGrupos,
-        datasets: [{
-            label: "Riscos Ativos",
-            data: riscos,
-            backgroundColor: "red"
-        }]
-    }
+    data: { labels: nomesGrupos, datasets: [{ label: "Riscos Ativos", data: riscos, backgroundColor: "red" }] }
 });
 
-function atualizarKPIs() {
-    const total = progresso.reduce((a,b)=>a+b,0)/nomesGrupos.length;
-    atualizarKPI(total);
-}
-
-function salvarGrupo(i) {
+// ---- Salvar no Firebase ----
+window.salvarGrupo = function(i) {
     progresso[i] = parseInt(document.getElementById(`prog${i}`).value);
     atrasadas[i] = parseInt(document.getElementById(`atr${i}`).value);
     riscos[i] = parseInt(document.getElementById(`ris${i}`).value);
     descricoes[i] = document.getElementById(`desc${i}`).value;
     tempoPrevisto[i] = parseInt(document.getElementById(`tempo${i}`).value);
 
-    const status = document.getElementById(`status${i}`);
-    if (riscos[i] > 3 || atrasadas[i] > 2) {
-        status.className = "status vermelho"; status.innerText = "Vermelho";
-    } else if (riscos[i] > 0 || atrasadas[i] > 0) {
-        status.className = "status amarelo"; status.innerText = "Amarelo";
-    } else {
-        status.className = "status verde"; status.innerText = "Verde";
-    }
+    set(ref(db, "grupos/" + i), {
+        nome: nomesGrupos[i],
+        progresso: progresso[i],
+        atrasadas: atrasadas[i],
+        riscos: riscos[i],
+        descricao: descricoes[i],
+        tempoPrevisto: tempoPrevisto[i],
+        atualizadoEm: new Date().toISOString()
+    });
 
-    ganttChart.data.datasets[0].data = tempoPrevisto;
-    ganttChart.data.datasets[0].backgroundColor = tempoPrevisto.map(val => `rgba(33, 150, 243, ${0.4 + val/20})`);
-    ganttChart.update();
-
-    riscoChart.data.datasets[0].data = riscos;
-    riscoChart.update();
-
-    atualizarKPIs();
-
+    atualizarGraficos();
     const agora = new Date().toLocaleString("pt-BR");
-    document.getElementById("historico").innerHTML += `<p>✍️ Grupo ${i+1} (${nomesGrupos[i]}) atualizado em ${agora} - Progresso: ${progresso[i]}%, Atrasos: ${atrasadas[i]}, Riscos: ${riscos[i]}, Tempo Previsto: ${tempoPrevisto[i]} dias<br>Descrição: ${descricoes[i]}</p>`;
-}
+    document.getElementById("historico").innerHTML += `<p>✅ Grupo ${i+1} salvo no Firebase em ${agora}</p>`;
+};
 
-atualizarKPIs();
+function atualizarGraficos() {
+    atualizarKPI(progresso.reduce((a,b)=>a+b,0)/nomesGrupos.length);
+    ganttChart.data.datasets[0].data = tempoPrevisto; ganttChart.update();
+    riscoChart.data.datasets[0].data = riscos; riscoChart.update();
+}
+atualizarGraficos();
+
+onValue(ref(db, "grupos"), (snapshot) => {
+    if (snapshot.exists()) {
+        const dados = snapshot.val();
+        Object.keys(dados).forEach(i => {
+            progresso[i] = dados[i].progresso || 0;
+            atrasadas[i] = dados[i].atrasadas || 0;
+            riscos[i] = dados[i].riscos || 0;
+            descricoes[i] = dados[i].descricao || "";
+            tempoPrevisto[i] = dados[i].tempoPrevisto || 0;
+        });
+        montarFormulario();
+        atualizarGraficos();
+        document.getElementById("historico").innerHTML += `<p>📥 Dados carregados do Firebase (${new Date().toLocaleTimeString("pt-BR")})</p>`;
+    }
+});
 </script>
 </body>
 </html>
