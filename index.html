@@ -117,7 +117,7 @@ button:hover {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// 🔑 Credenciais do Firebase
+// 🔑 Config Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyATkhWldIDdpf882QBSdDAmAwzwnwIC7IE",
   authDomain: "deshbords.firebaseapp.com",
@@ -129,10 +129,10 @@ const firebaseConfig = {
   measurementId: "G-VV06D2298P"
 };
 
-// Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// ✅ Dados Iniciais
 const nomesGrupos = ["Iniciação", "Planejamento", "Execução", "Monitoramento", "Encerramento"];
 let progresso = [20, 40, 60, 50, 10];
 let atrasadas = [0, 1, 2, 0, 1];
@@ -142,6 +142,7 @@ let tempoPrevisto = [5, 7, 10, 6, 4];
 
 const formDiv = document.getElementById("formGrupos");
 
+// ----- Monta formulário -----
 function montarFormulario() {
     formDiv.innerHTML = "";
     nomesGrupos.forEach((nome, i) => {
@@ -164,7 +165,7 @@ function montarFormulario() {
 }
 montarFormulario();
 
-// ---- Gráficos ----
+// ----- Gráficos -----
 const kpiChart = new Chart(document.getElementById("kpiChart"), {
     type: "doughnut",
     data: { labels: ["Concluído", "Restante"], datasets: [{ data: [0, 100], backgroundColor: ["#4caf50", "#e0e0e0"] }] },
@@ -174,6 +175,7 @@ function atualizarKPI(valor) {
     kpiChart.data.datasets[0].data = [valor, 100 - valor];
     kpiChart.update();
 }
+
 const burndownChart = new Chart(document.getElementById("burndownChart"), {
     type: "line",
     data: { labels: ["Dia 1","Dia 2","Dia 3","Dia 4","Dia 5"],
@@ -182,23 +184,35 @@ const burndownChart = new Chart(document.getElementById("burndownChart"), {
             { label: "Realizado", data: [100, 85, 70, 55, 40], borderColor: "red", fill: false }
         ]}
 });
+
 const ganttChart = new Chart(document.getElementById("ganttChart"), {
     type: "bar",
     data: { labels: nomesGrupos, datasets: [{ label: "Tempo Previsto (dias)", data: tempoPrevisto, backgroundColor: "rgba(33,150,243,0.6)" }] },
     options: { indexAxis: 'y', plugins: { legend: { display: false } } }
 });
+
 const riscoChart = new Chart(document.getElementById("riscoChart"), {
     type: "bar",
     data: { labels: nomesGrupos, datasets: [{ label: "Riscos Ativos", data: riscos, backgroundColor: "red" }] }
 });
 
-// ---- Salvar no Firebase ----
+// ----- Atualizar status automaticamente -----
+function atualizarStatus() {
+    nomesGrupos.forEach((_, i) => {
+        const statusEl = document.getElementById(`status${i}`);
+        if (atrasadas[i] > 0) statusEl.className = "status vermelho";
+        else if (progresso[i] < 50) statusEl.className = "status amarelo";
+        else statusEl.className = "status verde";
+    });
+}
+
+// ----- Salvar grupo no Firebase -----
 window.salvarGrupo = function(i) {
-    progresso[i] = parseInt(document.getElementById(`prog${i}`).value);
-    atrasadas[i] = parseInt(document.getElementById(`atr${i}`).value);
-    riscos[i] = parseInt(document.getElementById(`ris${i}`).value);
+    progresso[i] = parseInt(document.getElementById(`prog${i}`).value) || 0;
+    atrasadas[i] = parseInt(document.getElementById(`atr${i}`).value) || 0;
+    riscos[i] = parseInt(document.getElementById(`ris${i}`).value) || 0;
     descricoes[i] = document.getElementById(`desc${i}`).value;
-    tempoPrevisto[i] = parseInt(document.getElementById(`tempo${i}`).value);
+    tempoPrevisto[i] = parseInt(document.getElementById(`tempo${i}`).value) || 0;
 
     set(ref(db, "grupos/" + i), {
         nome: nomesGrupos[i],
@@ -215,13 +229,16 @@ window.salvarGrupo = function(i) {
     document.getElementById("historico").innerHTML += `<p>✅ Grupo ${i+1} salvo no Firebase em ${agora}</p>`;
 };
 
+// ----- Atualizar gráficos -----
 function atualizarGraficos() {
     atualizarKPI(progresso.reduce((a,b)=>a+b,0)/nomesGrupos.length);
     ganttChart.data.datasets[0].data = tempoPrevisto; ganttChart.update();
     riscoChart.data.datasets[0].data = riscos; riscoChart.update();
+    atualizarStatus();
 }
 atualizarGraficos();
 
+// ----- Receber dados do Firebase em tempo real -----
 onValue(ref(db, "grupos"), (snapshot) => {
     if (snapshot.exists()) {
         const dados = snapshot.val();
