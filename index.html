@@ -1,262 +1,286 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Controle do Projeto</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f5f5f5;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .section {
-      background: white;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      margin: 5px 0;
-    }
-    .status {
-      font-weight: bold;
-      padding: 10px;
-      color: white;
-      border-radius: 5px;
-      display: inline-block;
-    }
-    .verde { background: green; }
-    .amarelo { background: orange; }
-    .vermelho { background: red; }
-    canvas {
-      max-width: 100%;
-    }
-    textarea {
-      width: 100%;
-      height: 60px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      padding: 8px;
-      resize: none;
-    }
-    button {
-      margin-top: 5px;
-      padding: 5px 10px;
-      border: none;
-      background: #007bff;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Dashboard PMBOK - Controle e Monitoramento</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(to right, #f0f4f8, #d9e2ec);
+    margin: 0;
+    padding: 20px;
+}
+h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #333;
+}
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+textarea, select, input {
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+button {
+    margin-top: 8px;
+    padding: 8px 15px;
+    border: none;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+button:hover {
+    background: linear-gradient(135deg, #764ba2, #667eea);
+}
+#historico {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 14px;
+    background: #f9fafb;
+    padding: 10px;
+    border-radius: 8px;
+}
+.status {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: white;
+}
+.verde { background: green; }
+.amarelo { background: orange; }
+.vermelho { background: red; }
+</style>
 </head>
 <body>
-  <h1>📊 Painel de Controle do Projeto</h1>
 
-  <!-- Checklist -->
-  <div class="section">
-    <h2>✅ Checklist</h2>
-    <ul>
-      <li><input type="checkbox" checked> Pesquisa inicial</li>
-      <li><input type="checkbox"> Definição dos objetivos</li>
-      <li><input type="checkbox"> Elaboração do relatório</li>
-      <li><input type="checkbox"> Preparar apresentação</li>
-    </ul>
-  </div>
+<h1>📊 Dashboard PMBOK - Controle e Monitoramento</h1>
 
-  <!-- Semáforo -->
-  <div class="section">
-    <h2>🚦 Semáforo de Status</h2>
-    <span id="status" class="status verde">Projeto no prazo</span>
-    <br><br>
-    <button onclick="setStatus('verde')">Verde</button>
-    <button onclick="setStatus('amarelo')">Amarelo</button>
-    <button onclick="setStatus('vermelho')">Vermelho</button>
-  </div>
-
-  <!-- Burndown -->
-  <div class="section">
-    <h2>📉 Burndown Chart</h2>
-    <canvas id="burndownChart"></canvas>
-    <br><br>
-    <label for="realProgress">Progresso Real (dias):</label>
-    <input type="text" id="realProgress" placeholder="10, 9, 8, 6, 4, 3">
-    <button onclick="updateBurndown()">Atualizar Burndown</button>
-  </div>
-
-  <!-- Caderno Inteligente -->
-  <div class="section">
-    <h2>📒 Caderno Inteligente – Anotações das Equipes</h2>
-    <p>Use os campos abaixo para registrar o avanço de cada equipe.</p>
-
-    <div id="notebook">
-      <div>
-        <h3>Equipe 1</h3>
-        <textarea id="team1"></textarea>
-        <button onclick="saveNotes(1)">Salvar</button>
-        <p id="team1Date"></p>
-      </div>
-      <div>
-        <h3>Equipe 2</h3>
-        <textarea id="team2"></textarea>
-        <button onclick="saveNotes(2)">Salvar</button>
-        <p id="team2Date"></p>
-      </div>
-      <div>
-        <h3>Equipe 3</h3>
-        <textarea id="team3"></textarea>
-        <button onclick="saveNotes(3)">Salvar</button>
-        <p id="team3Date"></p>
-      </div>
-      <div>
-        <h3>Equipe 4</h3>
-        <textarea id="team4"></textarea>
-        <button onclick="saveNotes(4)">Salvar</button>
-        <p id="team4Date"></p>
-      </div>
-      <div>
-        <h3>Equipe 5</h3>
-        <textarea id="team5"></textarea>
-        <button onclick="saveNotes(5)">Salvar</button>
-        <p id="team5Date"></p>
-      </div>
+<div class="dashboard">
+    <div class="card">
+        <h2>KPI - Desempenho Geral</h2>
+        <canvas id="kpiChart" width="200" height="200"></canvas>
     </div>
-  </div>
 
-  <!-- Riscos -->
-  <div class="section risk">
-    <h2>⚠️ Monitoramento de Riscos</h2>
-    <label for="riskDescription">Descrição do risco:</label>
-    <textarea id="riskDescription" placeholder="Descreva o risco identificado"></textarea>
-    <label for="riskMitigation">Ação de mitigação:</label>
-    <textarea id="riskMitigation" placeholder="O que será feito para mitigar o risco"></textarea>
-    <button onclick="saveRisk()">Salvar Risco</button>
-  </div>
+    <div class="card">
+        <h2>Burndown Chart</h2>
+        <canvas id="burndownChart"></canvas>
+    </div>
 
-  <!-- Início do código JavaScript -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    // Função para alterar o semáforo
-    function setStatus(color) {
-      const status = document.getElementById("status");
-      status.className = "status " + color;
-      if (color === "verde") status.innerText = "Projeto no prazo";
-      if (color === "amarelo") status.innerText = "Risco identificado";
-      if (color === "vermelho") status.innerText = "Projeto atrasado";
-    }
+    <div class="card">
+        <h2>Linha do Tempo (Gantt)</h2>
+        <canvas id="ganttChart"></canvas>
+    </div>
 
-    // Gráfico Burndown
-    const ctx = document.getElementById('burndownChart').getContext('2d');
-    let burndownData = [10, 9, 7, 6, 4, 3]; // Progresso Real
-    const burndownChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Dia 1', 'Dia 2', 'Dia 3', 'Dia 4', 'Dia 5'],
-        datasets: [
-          {
-            label: 'Linha Ideal',
-            data: [10, 8, 6, 4, 2, 0],
-            borderColor: 'blue',
-            borderWidth: 2,
-            fill: false,
-            borderDash: [5, 5]
-          },
-          {
-            label: 'Progresso Real',
-            data: burndownData,
-            borderColor: 'red',
-            borderWidth: 2,
-            fill: false
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
+    <div class="card">
+        <h2>Riscos por Grupo</h2>
+        <canvas id="riscoChart"></canvas>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h2>Atualização dos Grupos (PMBOK)</h2>
+    <div id="formGrupos"></div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h2>Histórico de Alterações</h2>
+    <div id="historico"></div>
+</div>
+
+<script>
+const nomesGrupos = ["Iniciação", "Planejamento", "Execução", "Monitoramento", "Encerramento"];
+let progresso = [20, 40, 60, 50, 10];
+let atrasadas = [0, 1, 2, 0, 1];
+let riscos = [1, 2, 3, 1, 0];
+let descricoes = ["", "", "", "", ""];
+let tempoPrevisto = [5, 7, 10, 6, 4];
+
+const formDiv = document.getElementById("formGrupos");
+nomesGrupos.forEach((nome, i) => {
+    formDiv.innerHTML += `
+        <h3>Grupo ${i+1} - ${nome} <span id="status${i}" class="status verde">Verde</span></h3>
+        <label>Descrição:</label>
+        <textarea id="desc${i}">${descricoes[i]}</textarea>
+        <label>% Concluído:</label>
+        <input type="number" id="prog${i}" min="0" max="100" value="${progresso[i]}">
+        <label>Tarefas Atrasadas:</label>
+        <input type="number" id="atr${i}" min="0" value="${atrasadas[i]}">
+        <label>Riscos Ativos:</label>
+        <input type="number" id="ris${i}" min="0" value="${riscos[i]}">
+        <label>Tempo previsto (dias):</label>
+        <input type="number" id="tempo${i}" min="1" value="${tempoPrevisto[i]}">
+        <button onclick="salvarGrupo(${i})">Salvar Grupo ${i+1}</button>
+        <hr>
+    `;
+});
+
+const ctxKPI = document.getElementById("kpiChart").getContext("2d");
+const kpiChart = new Chart(ctxKPI, {
+    type: "doughnut",
+    data: {
+        labels: ["Concluído", "Restante"],
+        datasets: [{
+            data: [0, 100],
+            backgroundColor: ["#4caf50", "#e0e0e0"],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        cutout: "80%",
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false },
+            title: {
+                display: true,
+                text: "Progresso Geral",
+                font: { size: 16 }
+            }
         }
-      }
-    });
+    }
+});
 
-    // Função para atualizar o gráfico Burndown com dados inseridos pelo usuário
-    function updateBurndown() {
-      const progressInput = document.getElementById("realProgress").value;
-      const progressArray = progressInput.split(',').map(Number);
-      burndownData = progressArray;
+function atualizarKPI(valor) {
+    kpiChart.data.datasets[0].data = [valor, 100 - valor];
+    kpiChart.update();
+}
 
-      burndownChart.data.datasets[1].data = burndownData;
-      burndownChart.update();
+const burndownChart = new Chart(document.getElementById("burndownChart"), {
+    type: "line",
+    data: {
+        labels: ["Dia 1","Dia 2","Dia 3","Dia 4","Dia 5"],
+        datasets: [
+            { label: "Planejado", data: [100, 80, 60, 40, 20], borderColor: "blue", fill: false },
+            { label: "Realizado", data: [100, 85, 70, 55, 40], borderColor: "red", fill: false }
+        ]
+    }
+});
+
+// 🚀 Gráfico de Gantt corrigido
+const ganttChart = new Chart(document.getElementById("ganttChart"), {
+    type: "bar",
+    data: {
+        labels: nomesGrupos,
+        datasets: [{
+            label: "Tempo Previsto (dias)",
+            data: tempoPrevisto,
+            backgroundColor: tempoPrevisto.map(val => `rgba(33, 150, 243, ${0.4 + val/20})`),
+            borderColor: "rgba(33, 150, 243, 1)",
+            borderWidth: 2
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
+        },
+        plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: "Gráfico de Gantt - Tempo Previsto por Grupo",
+                font: { size: 16 }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return `⏳ ${context.raw} dias`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: "Dias"
+                }
+            },
+            y: {
+                ticks: {
+                    autoSkip: false, // <-- garante que TODOS grupos aparecem
+                    font: { size: 14 }
+                },
+                title: {
+                    display: true,
+                    text: "Grupos"
+                }
+            }
+        }
+    }
+});
+
+const riscoChart = new Chart(document.getElementById("riscoChart"), {
+    type: "bar",
+    data: {
+        labels: nomesGrupos,
+        datasets: [{
+            label: "Riscos Ativos",
+            data: riscos,
+            backgroundColor: "red"
+        }]
+    }
+});
+
+function atualizarKPIs() {
+    const total = progresso.reduce((a,b)=>a+b,0)/nomesGrupos.length;
+    atualizarKPI(total);
+}
+
+function salvarGrupo(i) {
+    progresso[i] = parseInt(document.getElementById(`prog${i}`).value);
+    atrasadas[i] = parseInt(document.getElementById(`atr${i}`).value);
+    riscos[i] = parseInt(document.getElementById(`ris${i}`).value);
+    descricoes[i] = document.getElementById(`desc${i}`).value;
+    tempoPrevisto[i] = parseInt(document.getElementById(`tempo${i}`).value);
+
+    const status = document.getElementById(`status${i}`);
+    if (riscos[i] > 3 || atrasadas[i] > 2) {
+        status.className = "status vermelho"; status.innerText = "Vermelho";
+    } else if (riscos[i] > 0 || atrasadas[i] > 0) {
+        status.className = "status amarelo"; status.innerText = "Amarelo";
+    } else {
+        status.className = "status verde"; status.innerText = "Verde";
     }
 
-    // Função para salvar anotações no localStorage com data de atualização
-    function saveNotes(team) {
-      const text = document.getElementById(`team${team}`).value;
-      const currentDate = new Date().toLocaleDateString();
-      localStorage.setItem(`team${team}Notes`, text);
-      localStorage.setItem(`team${team}Date`, currentDate);
-      alert(`Anotações da Equipe ${team} salvas!`);
+    ganttChart.data.datasets[0].data = tempoPrevisto;
+    ganttChart.data.datasets[0].backgroundColor = tempoPrevisto.map(val => `rgba(33, 150, 243, ${0.4 + val/20})`);
+    ganttChart.update();
 
-      document.getElementById(`team${team}Date`).innerText = `Última atualização: ${currentDate}`;
-    }
+    riscoChart.data.datasets[0].data = riscos;
+    riscoChart.update();
 
-    // Função para salvar o risco no localStorage
-    function saveRisk() {
-      const riskDescription = document.getElementById("riskDescription").value;
-      const riskMitigation = document.getElementById("riskMitigation").value;
+    atualizarKPIs();
 
-      if (riskDescription && riskMitigation) {
-        const risk = {
-          description: riskDescription,
-          mitigation: riskMitigation,
-          date: new Date().toLocaleDateString()
-        };
+    const agora = new Date().toLocaleString("pt-BR");
+    document.getElementById("historico").innerHTML += `<p>✍️ Grupo ${i+1} (${nomesGrupos[i]}) atualizado em ${agora} - Progresso: ${progresso[i]}%, Atrasos: ${atrasadas[i]}, Riscos: ${riscos[i]}, Tempo Previsto: ${tempoPrevisto[i]} dias<br>Descrição: ${descricoes[i]}</p>`;
+}
 
-        localStorage.setItem("risk", JSON.stringify(risk));
-        alert("Risco registrado com sucesso!");
-
-        document.getElementById("riskDescription").value = '';
-        document.getElementById("riskMitigation").value = '';
-      } else {
-        alert("Por favor, preencha todos os campos do risco.");
-      }
-    }
-
-    // Função para carregar os dados ao iniciar a página
-    // Função para carregar os dados ao iniciar a página
-window.onload = function() {
-  // Carregar anotações de cada equipe e suas datas de atualização
-  for (let i = 1; i <= 5; i++) {
-    const savedNotes = localStorage.getItem(`team${i}Notes`);
-    const savedDate = localStorage.getItem(`team${i}Date`);
-
-    if (savedNotes) {
-      document.getElementById(`team${i}`).value = savedNotes;
-    }
-    if (savedDate) {
-      document.getElementById(`team${i}Date`).innerText = `Última atualização: ${savedDate}`;
-    }
-  }
-
-  // Carregar o risco salvo
-  const savedRisk = localStorage.getItem("risk");
-  if (savedRisk) {
-    const risk = JSON.parse(savedRisk);
-    document.getElementById("riskDescription").value = risk.description;
-    document.getElementById("riskMitigation").value = risk.mitigation;
-  }
-};
-
+atualizarKPIs();
+</script>
+</body>
+</html>
